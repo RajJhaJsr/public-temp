@@ -37,6 +37,23 @@ services:
       - postgres
     restart: unless-stopped
 
+  solace:
+    image: solace/solace-pubsub-standard
+    container_name: solace
+    ports:
+      - "8070:8080"
+      - "55555:55555"
+      - "5672:5672"
+      - "5671:5671"
+      - "1883:1883"
+      - "8883:8883"
+      - "8008:8008"
+    environment:
+      - username_admin_globalaccesslevel=admin
+      - username_admin_password=admin
+      - system_scaling_maxconnectioncount=100
+    shm_size: 1g
+
 networks:
   postgres:
     driver: bridge

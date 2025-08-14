@@ -3,7 +3,81 @@ server:
 
 spring:
   application:
-    name: stp-mvp
+    name: stp-fss-mvp
+  threads:
+    virtual:
+      enabled: true
+  cloud:
+    function:
+      definition: processOrder;
+    stream:
+      bindings:
+        processOrder-out-0: # optional
+          destination: stm/fss/orders/captured/v1
+          #binder: solace-broker
+        processOrder-in-0:
+          destination: stm/fss/orders/captured/v1    # Just a name of subscription-topic for queue
+          group: stm-fss-order-processing-group
+          #binder: solace-broker
+          consumer:
+            concurrency: 1
+            max-attempts: 1  # Disable Spring Cloud Stream retry, handle manually
+#        # Retry queue consumer
+#        processRetry-in-0:
+#          destination: orders.retry.queue  # Just a name of subscription-topic for queue
+#          group: order-retry-group
+#          #binder: solace-broker
+#          consumer:
+#            concurrency: 1
+#            #max-attempts: 1
+#        # DLQ producer
+#        dlq-out-0:
+#          destination: orders.dlq
+#          #binder: solace-broker
+#        # Retry queue producer
+#        retry-out-0:
+#          destination: orders.retry.queue
+#          #binder: solace-broker
+
+      solace:
+        bindings:
+          #          processOrder-out-0:  # optional
+          #            producer:
+          #              destinationType: TOPIC #Default is Topic for out/producer
+          processOrder-in-0:
+            consumer:
+              queueNameExpression: "'stm.fss.orders.processing.v1.queue'"
+              #addDestinationAsSubscriptionToQueue: false  #Defult true adds the Destination ( orders/topic) as a subscription to queue
+              #provisionDurableQueue: false
+              #endpointType: topic_endpoint  #Default is queue for in/consumer, When set to topic_endpoint, then instead of provisioning a queue for the consumer group’s endpoint, the binder will instead provision a topic endpoint.
+            ## durable topic endpoint is similar to queue, where queue can subscribe to multiple topics and allows multiple consumers to consume messages independently, topic_endpoint is bound to one topic
+#          processRetry-in-0:
+#            consumer:
+#              queueNameExpression: "'orders.retry.queue'"
+#              #provisionDurableQueue: false
+#          retry-out-0:
+#            producer:
+#              time-to-live: 30000  # 30 seconds TTL for retry messages
+
+      binders:
+        solace-broker: # just a name for the binder
+          type: solace
+          environment:
+            solace:
+              java:
+                host: tcp://localhost:55555
+                msgVpn: default
+                clientUsername: admin
+                clientPassword: admin
+                connectRetries: -1
+                reconnectRetries: -1
+    #                apiProperties:
+    #                  ssl_trust_store: <path_to_trust_store>
+    #                  ssl_trust_store_password: <trust_store_password>
+    #                  ssl_validate_certificate: true
+
+
+
 
   r2dbc:
     url: r2dbc:postgresql://localhost:5432/stm
@@ -23,6 +97,7 @@ spring:
 
 logging:
   level:
+    com.hsbc.stm: DEBUG
     org.springframework.r2dbc: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
